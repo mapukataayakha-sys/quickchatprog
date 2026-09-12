@@ -1,5 +1,9 @@
 package progassmentcom.quickchat;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.Random;
 
 public class Message {
@@ -9,12 +13,16 @@ public class Message {
     String messageContent;
     String messageHash;
     boolean messageSent;
+    boolean messageReceived;
+    boolean messageRead;
 
     public Message(String recipient, String messageContent) {
         this.recipient = recipient;
         this.messageContent = messageContent;
         this.messageNumber = 0;
         this.messageSent = false;
+        this.messageReceived = false;
+        this.messageRead = false;
         
         // Generate a random 10-digit ID for each message
         Random random = new Random();
@@ -77,6 +85,27 @@ public class Message {
         }
     }
 
+    /**
+     * Stores message to JSON file using Google's Gson library.
+     * JSON serialization allows messages to be persisted and retrieved later.
+     * Reference: https://github.com/google/gson
+     * Gson provides simple API for converting Java objects to JSON and vice versa
+     */
+    public void storeToJSON(String filename) {
+        try {
+            Gson gson = new GsonBuilder().setPrettyPrinting().create();
+            String json = gson.toJson(this);
+            
+            FileWriter writer = new FileWriter(filename, true);
+            writer.write(json + "\n");
+            writer.close();
+            
+            System.out.println("Message stored to " + filename);
+        } catch (IOException e) {
+            System.out.println("Error storing message: " + e.getMessage());
+        }
+    }
+
     public void printMessage() {
         System.out.println("Message ID: " + messageID);
         System.out.println("Message Hash: " + messageHash);
@@ -110,5 +139,21 @@ public class Message {
 
     public boolean isMessageSent() {
         return messageSent;
+    }
+
+    public void setMessageReceived(boolean received) {
+        this.messageReceived = received;
+    }
+
+    public void setMessageRead(boolean read) {
+        this.messageRead = read;
+    }
+
+    public boolean isMessageReceived() {
+        return messageReceived;
+    }
+
+    public boolean isMessageRead() {
+        return messageRead;
     }
 }
