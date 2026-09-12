@@ -1,5 +1,8 @@
 package progassmentcom.quickchat;
 
+import com.google.gson.Gson;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Scanner;
 
@@ -33,7 +36,7 @@ public class QuickChat {
 
             if (loginSystem.loginUser(loginUsername, loginPassword)) {
                 System.out.println(loginSystem.returnLoginStatus(true));
-                runApplication(scanner);
+                runApplication(scanner, loginUsername);
             } else {
                 System.out.println(loginSystem.returnLoginStatus(false));
             }
@@ -42,11 +45,14 @@ public class QuickChat {
         scanner.close();
     }
 
-    private static void runApplication(Scanner scanner) {
+    private static void runApplication(Scanner scanner, String loggedInUsername) {
         // Maintain separate lists for different message states
         ArrayList<Message> sentMessages = new ArrayList<>();
         ArrayList<Message> storedMessages = new ArrayList<>();
         ArrayList<Message> disregardedMessages = new ArrayList<>();
+        
+        // Load stored messages from JSON file on startup
+        storedMessages = readStoredMessagesFromJSON("stored_messages.json");
 
         boolean appRunning = true;
 
@@ -55,11 +61,14 @@ public class QuickChat {
             System.out.println("1) Send Messages");
             System.out.println("2) Show recently sent messages");
             System.out.println("3) View stored messages");
-            System.out.println("4) Search by recipient");
-            System.out.println("5) Delete by hash");
-            System.out.println("6) View report");
-            System.out.println("7) Quit");
-            System.out.print("Select an option (1-7): ");
+            System.out.println("4) Search by message ID");
+            System.out.println("5) Search by recipient");
+            System.out.println("6) Delete by hash");
+            System.out.println("7) Find longest message");
+            System.out.println("8) View sender and recipient report");
+            System.out.println("9) View report");
+            System.out.println("10) Quit");
+            System.out.print("Select an option (1-10): ");
 
             int menuChoice = readInt(scanner);
 
@@ -82,6 +91,11 @@ public class QuickChat {
                     }
                 }
                 case 4 -> {
+                    System.out.print("Enter message ID to search: ");
+                    String msgID = scanner.nextLine();
+                    searchByMessageID(sentMessages, storedMessages, msgID);
+                }
+                case 5 -> {
                     System.out.print("Enter recipient number to search: ");
                     String recipient = scanner.nextLine();
                     ArrayList<Message> matches = searchByRecipient(sentMessages, storedMessages, disregardedMessages, recipient);
@@ -92,7 +106,7 @@ public class QuickChat {
                         displayReport(matches);
                     }
                 }
-                case 5 -> {
+                case 6 -> {
                     System.out.print("Enter message hash to delete: ");
                     String hash = scanner.nextLine();
                     boolean deleted = deleteByHash(sentMessages, storedMessages, hash, scanner);
@@ -102,14 +116,27 @@ public class QuickChat {
                         System.out.println("No message matched that hash.");
                     }
                 }
-                case 6 -> {
+                case 7 -> {
+                    ArrayList<Message> allMessages = new ArrayList<>();
+                    allMessages.addAll(sentMessages);
+                    allMessages.addAll(storedMessages);
+                    String longest = findLongestMessage(allMessages);
+                    System.out.println("Longest message: " + longest);
+                }
+                case 8 -> {
+                    ArrayList<Message> allMessages = new ArrayList<>();
+                    allMessages.addAll(sentMessages);
+                    allMessages.addAll(storedMessages);
+                    displaySenderAndRecipient(allMessages, loggedInUsername);
+                }
+                case 9 -> {
                     if (sentMessages.isEmpty()) {
                         System.out.println("No messages to report.");
                     } else {
                         displayReport(sentMessages);
                     }
                 }
-                case 7 -> {
+                case 10 -> {
                     System.out.println("Total messages sent: " + sentMessages.size());
                     System.out.println("Thank you for using QuickChat!");
                     appRunning = false;
@@ -167,6 +194,7 @@ public class QuickChat {
                         break;
                     case 3:
                         storedMessages.add(message);
+                        message.storeToJSON("stored_messages.json");
                         break;
                     default:
                         break;
@@ -184,6 +212,93 @@ public class QuickChat {
             } catch (NumberFormatException e) {
                 System.out.print("Please enter a valid number: ");
             }
+        }
+    }
+
+    /**
+     * Reads stored messages from JSON file.
+     * Uses Google's Gson library to deserialize JSON back into Message objects.
+     * Reference: https://github.com/google/gson
+     */
+    public static ArrayList<Message> readStoredMessagesFromJSON(String filename) {
+        ArrayList<Message> messages = new ArrayList<>();
+        
+        try {
+            String content = new String(Files.readAllBytes(Paths.get(filename)));
+            Gson gson = new Gson();
+            
+            String[] jsonLines = content.trim().split("\n");
+            for (String line : jsonLines) {
+                if (!line.isEmpty()) {
+                    Message msg = gson.fromJson(line, Message.class);
+                    messages.add(msg);
+                }
+            }
+            System.out.println("Loaded " + messages.size() + " stored messages from file.");
+        } catch (Exception e) {
+            System.out.println("No stored messages file found or error reading: " + e.getMessage());
+        }
+        
+        return messages;
+    }
+
+    /**
+     * Finds and returns the longest message from a list of messages.
+     * Part 3 Feature: Display Longest Stored Message
+     */
+    public static String findLongestMessage(ArrayList<Message> messages) {
+        if (messages.isEmpty()) {
+            return "No stored messages.";
+        }
+        
+        Message longest = messages.get(0);
+        for (Message msg : messages) {
+            if (msg.getMessageContent().length() > longest.getMessageContent().length()) {
+                longest = msg;
+            }
+        }
+        
+        return longest.getMessageContent();
+    }
+
+    /**
+     * Searches for a message by ID and returns recipient and message content.
+     * Part 3 Feature: Search for Message ID and Return Recipient + Message
+     */
+    public static void searchByMessageID(ArrayList<Message> sentMessages, 
+                                        ArrayList<Message> storedMessages, 
+                                        String messageID) {
+        // Check sent messages
+        for (Message msg : sentMessages) {
+            if (msg.getMessageID().equals(messageID)) {
+                System.out.println("Recipient: " + msg.getRecipient());
+                System.out.println("Message: " + msg.getMessageContent());
+                return;
+            }
+        }
+        
+        // Check stored messages
+        for (Message msg : storedMessages) {
+            if (msg.getMessageID().equals(messageID)) {
+                System.out.println("Recipient: " + msg.getRecipient());
+                System.out.println("Message: " + msg.getMessageContent());
+                return;
+            }
+        }
+        
+        System.out.println("Message ID not found.");
+    }
+
+    /**
+     * Displays sender and recipient information for all messages.
+     * Part 3 Feature: Display Sender and Recipient of Stored Messages
+     */
+    public static void displaySenderAndRecipient(ArrayList<Message> messages, String senderUsername) {
+        System.out.println(" Sender and Recipient Report ");
+        for (Message msg : messages) {
+            System.out.println("Sender: " + senderUsername);
+            System.out.println("Recipient: " + msg.getRecipient());
+            System.out.println("---");
         }
     }
 
