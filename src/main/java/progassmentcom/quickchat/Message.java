@@ -35,8 +35,14 @@ public class Message {
     }
 
     public String checkRecipientCell() {
-        // Cell number must start with + (international code) and be reasonable length
-        if (recipient != null && recipient.startsWith("+") && recipient.length() <= 13) {
+        /**
+         * Validates recipient cell phone number using regex pattern.
+         * Pattern: International code (+) followed by 1-3 country digits, then 9-10 local digits
+         * Reference: Regular Expression Patterns for Phone Numbers
+         * https://stackoverflow.com/questions/14894993/validate-phone-number-with-regex
+         */
+        String pattern = "^\\+\\d{1,3}\\d{9,10}$";
+        if (recipient != null && recipient.matches(pattern)) {
             return "Cell phone number successfully captured.";
         }
         return "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.";
