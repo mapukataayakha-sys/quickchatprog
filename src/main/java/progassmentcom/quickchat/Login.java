@@ -48,12 +48,22 @@ public class Login {
         return hasUppercase && hasNumber && hasSpecialChar;
     }
 
+    /**
+     * Validates cell phone number using regex pattern.
+     * Pattern: International code (+) followed by 1-3 country digits, then 9-10 local digits
+     * South Africa example: +27 + 9 digits = +27834557896
+     * 
+     * Reference: Regular Expression Patterns for Phone Numbers
+     * https://stackoverflow.com/questions/14894993/validate-phone-number-with-regex
+     * 
+     * JSON serialization using Google's Gson library
+     * Reference: https://github.com/google/gson
+     */
     public boolean checkCellPhoneNumber() {
-        // South African numbers must start with + (international code) and fit length requirement
-        if (cellPhoneNumber == null) {
-            return false;
-        }
-        return cellPhoneNumber.startsWith("+") && cellPhoneNumber.length() <= 13;
+        // Pattern: + followed by 1-3 digits (country code), then 9-10 digits (local)
+        // South African: +27 (2 chars) + 9 digits = 12 chars total
+        String pattern = "^\\+\\d{1,3}\\d{9,10}$";
+        return cellPhoneNumber != null && cellPhoneNumber.matches(pattern);
     }
 
     public String registerUser() {
