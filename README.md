@@ -320,8 +320,5 @@ This project is part of a programming assessment and is provided as-is.
 **Total Commits:** 10+ across feature branches
 **Total Unit Tests:** 75+
 **Code Coverage:** All classes and methods tested
-**Final Score Target:** 85-90%
-
----
 
 For questions or issues, please refer to the project repository or documentation in the code.
