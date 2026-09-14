@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.Random;
 
 public class Message {
+    // Strict South African format only: +27 followed by exactly 9 digits.
+    private static final String RECIPIENT_PATTERN = "^\\+27\\d{9}$";
+
     String messageID;
     int messageNumber;
     String recipient;
@@ -23,7 +26,7 @@ public class Message {
         this.messageSent = false;
         this.messageReceived = false;
         this.messageRead = false;
-        
+
         // Generate a random 10-digit ID for each message
         Random random = new Random();
         this.messageID = String.format("%010d", random.nextInt(1_000_000_000));
@@ -34,15 +37,14 @@ public class Message {
         return messageID != null && messageID.length() == 10;
     }
 
+    // Boolean validator so callers don't have to parse the message to validate the number
+    public boolean isRecipientValid() {
+        return recipient != null && recipient.matches(RECIPIENT_PATTERN);
+    }
+
     public String checkRecipientCell() {
-        /**
-         * Validates recipient cell phone number using regex pattern.
-         * Pattern: International code (+) followed by 1-3 country digits, then 9-10 local digits
-         * Reference: Regular Expression Patterns for Phone Numbers
-         * https://stackoverflow.com/questions/14894993/validate-phone-number-with-regex
-         */
-        String pattern = "^\\+\\d{1,3}\\d{9,10}$";
-        if (recipient != null && recipient.matches(pattern)) {
+        
+        if (isRecipientValid()) {
             return "Cell phone number successfully captured.";
         }
         return "Cell phone number is incorrectly formatted or does not contain an international code. Please correct the number and try again.";
@@ -53,26 +55,28 @@ public class Message {
         String firstTwoDigits = (messageID != null && messageID.length() >= 2)
                 ? messageID.substring(0, 2)
                 : "00";
-        
+
         String[] words = (messageContent == null || messageContent.trim().isEmpty())
                 ? new String[]{"MESSAGE"}
                 : messageContent.trim().split("\\s+");
-        
+
         String firstWord = words[0].toUpperCase();
         String lastWord = words[words.length - 1].toUpperCase();
         messageHash = firstTwoDigits + ":" + messageNumber + ":" + firstWord + lastWord;
         return messageHash;
     }
 
+    // Boolean validator for message length validation
+    public boolean isMessageLengthValid() {
+        return messageContent != null && messageContent.length() <= 250;
+    }
+
     public String checkMessageLength() {
-        if (messageContent == null) {
-            return "Message exceeds 250 characters by 250; please reduce the size.";
-        }
-        if (messageContent.length() <= 250) {
+        if (isMessageLengthValid()) {
             return "Message ready to send.";
         }
         // Calculate how many characters over the limit
-        int exceededBy = messageContent.length() - 250;
+        int exceededBy = (messageContent == null) ? 250 : messageContent.length() - 250;
         return "Message exceeds 250 characters by " + exceededBy + "; please reduce the size.";
     }
 
@@ -91,21 +95,25 @@ public class Message {
         }
     }
 
-    /**
-     * Stores message to JSON file using Google's Gson library.
-     * JSON serialization allows messages to be persisted and retrieved later.
-     * Reference: https://github.com/google/gson
-     * Gson provides simple API for converting Java objects to JSON and vice versa
-     */
+    // Setters allow input re-prompting without rebuilding the object
+    public void setRecipient(String recipient) {
+        this.recipient = recipient;
+    }
+
+    public void setMessageContent(String messageContent) {
+        this.messageContent = messageContent;
+    }
+
+    
     public void storeToJSON(String filename) {
         try {
             Gson gson = new GsonBuilder().setPrettyPrinting().create();
             String json = gson.toJson(this);
-            
+
             FileWriter writer = new FileWriter(filename, true);
             writer.write(json + "\n");
             writer.close();
-            
+
             System.out.println("Message stored to " + filename);
         } catch (IOException e) {
             System.out.println("Error storing message: " + e.getMessage());
